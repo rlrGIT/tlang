@@ -15,186 +15,6 @@
 //	g++ -std=c++0x -I/home/courses/include -D AST_EXAMPLES_IS_MAIN=1 -D ERRORMSG_SKIP_LEX=1 AST.cc AST-print.cc AST-print-attributes.cc HERA_code.cc result_reg.cc util.cc errormsg.cc -L/home/courses/lib -lcourses -o AST_examples && ./AST_examples
 
 
-void AST_examples()
-{
-	// Use the constructors of AST_appel.h, i.e. Appel's Figure 4.7, to create some example AST's
-	// 14+6
-	A_exp fourteen	= A_IntExp(Position::undefined(), 14);  // 14
-	A_exp six	= A_IntExp(Position::undefined(), 6);  // 6
-	A_exp twenty	= A_OpExp(Position::undefined(), A_plusOp, fourteen, six);  // 14+6
-
-	// "Some AST examples"
-	A_exp title	= A_StringExp(Position::undefined(), "Some AST\texamples\n");
-
-	// print("Some AST examples")
-	A_exp call1	= A_CallExp(Position::undefined(), to_Symbol("print"),
-				    A_ExpList(title, 0));  // 0 indicates end of list
-
-	// 36*2+14+6
-	Position undef	= Position::undefined();  // an abbreviation; I'm getting tired
-	A_exp exp_92	= A_OpExp(undef, A_plusOp,
-				  A_OpExp(undef, A_timesOp, A_IntExp(undef, 36), A_IntExp(undef, 2)),
-				  twenty);
-
-	// print("Some AST examples"); printint(mod(32*2+14+6, 50))
-	A_exp all	= A_SeqExp(undef,
-					A_ExpList(call1,
-						A_ExpList(A_CallExp(undef, to_Symbol("printint"),
-							A_ExpList(A_CallExp(undef, to_Symbol("mod"),
-								A_ExpList(exp_92,
-									A_ExpList(A_IntExp(undef, 50),
-												 0))  // end of mod parameters
-										     ), // end of call to mod
-									   0) // end of printint parameters
-								 ), // end of call to printint
-						       0) // end of sublist with call to printint
-					     ) // end of main list of expressions with two calls
-				   ); // end of top A_SeqExp
-
-	EM_debug(repr(all), all->pos());
-}
-
-void AST_example_let()
-{
-/*
-  Build (using the functions from AST_appel.h and Figure 4.7) and print
-  the AST corresponding to the following tiger program:
-
-    let
-	var wombat : int := 14+6
-	var arthropod : int := 2
-    in
-	(let
-	    var wombat : int := 35
-	 in
-	    arthropod := wombat+arthropod
-	 end)
-       +
-	(let
-	    var arthropod : int := 4
-	 in
-	    wombat/arthropod
-	 end)
-    end
-
-    Since this isn't coming from the lexical scanner
-      (the example is run before the actual compiler starts),
-      the "adjust" function hasn't had a chance to record the lengths of lines,
-      and we can't refer to "positions" in any useful way.
-
-    So ... in this example, the "pos" parameter (for position)
-      is just left at the initial EM_currentPos(), which will show up as line 1.
-    In the compiler, you could just use EM_currentPos() for all "pos" fields as well,
-      but this would end up identifying the position at the _end_ of each complete
-      expression, (i.e., line 15 would be associated with the "+" on line 10 of the example).
-    Better would be to associate a "pos" attribute with the PLUS token,
-      and use that as the "pos" for the A_opExp_.
-
-    The function names below are the same as those used in Appel's book.
-    I usually use the most general appropriate type of pointer for the AST node produced,
-      e.g. A_exp for both integers and operations, but A_dec for a vardec or declist.
-
-    This gets taught before types, so for the moment all types are just given as "0" (null pointer).
-*/
-
-	A_exp fourteen = A_IntExp(Position::undefined(), 14);  // 14
-	A_exp six      = A_IntExp(Position::undefined(), 6);  // 6
-	A_exp twenty   = A_OpExp(Position::undefined(), A_plusOp, fourteen, six);  // 14+6
-
-	A_dec wombat1  = A_VarDec(Position::undefined(), to_Symbol("wombat"), 0, twenty); // no type info given
-	A_dec arth1    = A_VarDec(Position::undefined(), to_Symbol("arthropod"), 0, A_IntExp(Position::undefined(), 2));
-	A_decList let1_decs = A_DecList(wombat1, A_DecList(arth1, 0));  // that's the declarations for let #1
-
-
-	// *** Now the stuff for the 2nd let (the first one inside the outer let) ***
-	A_dec wombat2  = A_VarDec(Position::undefined(), to_Symbol("wombat"), 0, A_IntExp(Position::undefined(), 35));
-	A_decList let2_decs = A_DecList(wombat2, 0);
-
-	// wombat + arthropod
-	A_var w_var2   = A_SimpleVar(Position::undefined(), to_Symbol("wombat"));
-	A_exp w_use2   = A_VarExp(Position::undefined(), w_var2);  // for the use of "wombat" in "wombat+arthropod"
-	A_exp a_use2   = A_VarExp(Position::undefined(), A_SimpleVar(Position::undefined(), to_Symbol("arthropod")));
-	A_exp sum2     = A_OpExp(Position::undefined(), A_plusOp, w_use2, a_use2);
-
-	// arthropod := 
-	A_var a_var2   = A_SimpleVar(Position::undefined(), to_Symbol("arthropod"));
-
-	// arthropod := wombat + arthropod
-	A_exp assign_a = A_AssignExp(Position::undefined(), a_var2, sum2);
-
-	// now, build the node for "let2" from everything from "*** Now the stuff for the 2nd let" to here
-	A_exp let2     = A_LetExp(Position::undefined(), let2_decs, assign_a);
-
-
-	// *** Now the stuff for the 3rd let (the 2nd one inside the outer let)
-	A_exp let3     = A_LetExp(Position::undefined(),
-				  A_DecList(A_VarDec(Position::undefined(), to_Symbol("arthropod"), 0, A_IntExp(Position::undefined(), 4)),
-					    0),
-				  A_OpExp(Position::undefined(), A_divideOp,
-					  A_VarExp(Position::undefined(), A_SimpleVar(Position::undefined(), to_Symbol("wombat"))),
-					  A_VarExp(Position::undefined(), A_SimpleVar(Position::undefined(), to_Symbol("arthropod")))));
-
-	// *** At long last, we can build that "+" that sums the two inner lets, and the main let itself:
-	A_exp let1      = A_LetExp(Position::undefined(),
-				   let1_decs,
-				   A_OpExp(Position::undefined(), A_plusOp, let2, let3));
-
-	A_root_ *local_AST_root = new A_root_(let1);
-
-	// Phew. Done at last. Let's print it.
-
-	EM_debug("Here's a simple AST for 14+6, printed with to_String");
-	EM_debug(str(twenty));
-
-	EM_debug("Now,  here's the HERA code we get at the moment for that:");
-	EM_debug(twenty->HERA_code());
-
-	EM_debug("Here's the full example AST, printed with to_String");
-	EM_debug(str(local_AST_root));
-}
-
-
-void AST_example_functions()
-{
-/*
-  Build (using the functions from AST_appel.h and Figure 4.7) and print
-  the AST corresponding to the following tiger program:
-
-    let
-        var two : int := 2
-	function half_answer(): int = 21
-	function get_two(): int = two  // Note ... can use "answer" here, but we cannot use "it" 
-	function answer() : int = half_answer() * get_two()
-	var it : int := answer()
-    in
-	printint(it)
-    end
-
-    Note that tiger "sees" this as a three-element let, with a variable,
-         a collection of potentially-recursive functions, and another variable.
-	 The FunctionDec holds the list of functions.
-  */
-
-
-	Position u = Position::undefined();
-	Symbol tig_int = to_Symbol("int");
-	A_root_ *r = A_RootExp(A_LetExp(u, A_DecList(A_VarDec(u, to_Symbol("two"), tig_int, A_IntExp(u, 2)),
-					       A_DecList(A_FunctionDec(u, A_FundecList(A_Fundec(u, to_Symbol("half_answer"), 0, tig_int, A_IntExp(u, 21)),
-										       A_FundecList(A_Fundec(u, to_Symbol("get_two"),     0, tig_int, A_VarExp(u, A_SimpleVar(u, to_Symbol("two")))),
-												 A_FundecList(A_Fundec(u, to_Symbol("answer"),      0, tig_int, A_OpExp(u, A_timesOp,
-																    A_CallExp(u, to_Symbol("half_answer"), 0),
-																    A_CallExp(u, to_Symbol("get_two"), 0))),
-							     0)))),
-				     A_DecList(A_VarDec(u, to_Symbol("it"), tig_int, A_CallExp(u, to_Symbol("answer"), 0)),
-				     0))),
-				     
-				     A_CallExp(u, to_Symbol("printint"),
-					       A_ExpList(A_VarExp(u, A_SimpleVar(u, to_Symbol("it"))), 0))));
-	
-	EM_debug("Here's the example from AST_example_functions:");
-	EM_debug(str(r));
-}
-
 #if defined(AST_EXAMPLES_IS_MAIN) && AST_EXAMPLES_IS_MAIN
 int main()
 {
@@ -206,10 +26,7 @@ int main()
 #endif
 
 
-					  
-				  
 // Now, the functions for the actual AST classes...
-
 AST_node_::AST_node_(A_pos pos) : stored_pos(pos)  // concise initialization of "pos" data field
 {
 }
@@ -219,19 +36,17 @@ AST_node_::~AST_node_()
 }
 
 A_root_::A_root_(A_exp main_exp) : AST_node_(main_exp->pos()), main_expr(main_exp) {
-	// We'd *like* to call
-	//     this->set_par_pointers(0);
-	// HOWEVER, the type of "this" is still AST_Node_, until the end of the constructor when it's a full-formed A_root_.
-	//          Thus, we'll write the code that would have been in that function:
 
 	this->stored_parent = 0;
 	this->set_par_pointers();
+	EM_debug("Inital parent pointers set...");	
+
 	A_exp_* canon_main = main_expr->canonical_form();
+	this->main_expr = canon_main;	
 	EM_debug("Canonical form successfully built!");
 	
-	this->main_expr = canon_main;	
 	this->set_par_pointers();
-	EM_debug("Parent pointers have been set");
+	EM_debug("Parent pointers have been set for cna");
 }
 
 
