@@ -17,13 +17,10 @@ int A_exp_::sethi_ullman()
 
 int A_root_::sethi_ullman()
 {
-/*
 	A_exp_* main = this->get_main();
 	if (main != 0)
 		return main->sethi_ullman();
 	return 1;
-*/
-	return this->sethi_ullman();
 }
 
 

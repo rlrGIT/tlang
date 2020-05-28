@@ -11,6 +11,34 @@
 //	merge(outer,inner) has symbols from "inner" shadow those of "outer".
 // For details & sample uses of operations, see test_ST in ST.c.
 
+// Now the accessor  functions: is_name_there and lookup and to_String
+
+	// return true iff "look_for_me" is present in "in_this_table"
+	//
+	// axioms:
+	// is_name_there(look, ST())      	    === false
+	// is_name_there(look, ST(n, i))  	    === look == n
+	// is_name_there(look, fuse(T1, T2))	=== is_name_there(look, T1) || is_name_there(look, T2)
+	// is_name_there(look, merge(in, out))	=== is_name_there(look, in) || is_name_there(look, out)
+
+	// check for name,
+	//   returning info for "first" match (the one that's not shadowed),
+	//   or throw ST::undefined_symbol(name) if no matches
+	// Return a REFERENCE to the symbol_info in the table.
+	//	NOTE that FUSE, MERGE, ST::ST, and op== DO NOT copy the symbol_info,
+	//	so if something is added once to a table and then propogates into
+	//	into many tables, ALL the symbol_info's for that thing are SHARED
+	// Thus, changes made via "lookup" are visible EVERYWHERE the symbol_info can be found
+	//
+	// axioms:
+	// lookup(look, ST())      	    === <exception thrown due to missing name>
+	// lookup(look, ST(n, i))  	    ===    i, if look == n
+	//                                  or <exception thrown due to missing name>, otherwise
+	// lookup(look, fuse(T1, T2))	===    lookup(look, T1), if is_name_there(look, T1),
+	//                                  or lookup(look, T2), otherwise
+	// lookup(look, merge(in, out))	===    lookup(look, in), if is_name_there(look, T1),
+	//                                  or lookup(look, out), otherwise
+
 #include <list>
 #include "types.h"
 #include "symbol.h"
@@ -69,14 +97,14 @@ protected:
 // note that symbol_info type has not been specified - class symbol_info is like a placeholder for a generic variable
 // e.g. if a function using this generic form is invoked with type int, gcc automatically creates a version of the function
 // and replaces it with type int 
-template <class symbol_info> class ST;
-template <class symbol_info> class ST_node; // should be private to class ST, but this breaks g++
+template <class symbol_info> struct ST;
+template <class symbol_info> struct ST_node; // should be private to class ST, but this breaks g++
 
 template <class symbol_info> bool is_name_there(const nametype &look_for_me, const ST<symbol_info> &in_this_table);
 template <class symbol_info> symbol_info &lookup(const nametype &must_find_this, const ST<symbol_info> &in_this_table);
 template <class symbol_info> ST<symbol_info> merge_or_fuse(const ST<symbol_info> &outer, const ST<symbol_info> &inner, bool merge_dups);
 
-template <class symbol_info> class ST {
+template <class symbol_info> struct ST {
 public:
 	
 	ST();

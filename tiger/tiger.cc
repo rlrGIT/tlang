@@ -105,7 +105,7 @@ void lex_test()
 int main(int argc, char **argv)
 {
   try {
-	bool debug = false, show_ast = false, crash_on_fatal;
+	bool debug = false, show_ast = false, crash_on_fatal = false;
 #if defined COMPILE_LEX_TEST
 	bool just_do_lex_and_then_stop = false;
 #endif

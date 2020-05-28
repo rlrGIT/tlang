@@ -176,7 +176,6 @@ typedef class A_var_ *A_var;
 typedef class A_exp_ *A_exp;
 typedef class A_dec_ *A_dec;
 typedef class A_ty_ *A_ty;
-
 typedef class A_decList_ *A_decList;
 typedef class A_expList_ *A_expList;
 typedef class A_field_ *A_field;
@@ -187,8 +186,6 @@ typedef class A_namety_ *A_namety;
 typedef class A_nametyList_ *A_nametyList;
 typedef class A_efield_ *A_efield;
 typedef class A_efieldList_ *A_efieldList;
-// #include "AST_attribute_types.h"   // This is for the old (non-lazy) attribute system
-
 typedef enum {A_plusOp, A_minusOp, A_timesOp, A_divideOp,
 	     A_eqOp, A_neqOp, A_ltOp, A_leOp, A_gtOp, A_geOp} A_oper;
 
@@ -258,12 +255,8 @@ public:
 
 	A_pos pos() { return stored_pos; }
 
-	// Each node will know its parent, except the root node (on which this is an error):
 	virtual AST_node_ *parent();	// get the parent node, after the 'set all parent nodes' pass
-	// Those parent pointers are set by the set_parent... function below,
-	//    WHICH MUST ONLY BE CALLED FROM THE ROOT CONSTRUCTOR AND THEN RECURSIVELY
-	// (I don't know how to say that in C++ without a zillion "friend" definitions, though.)
-	virtual AST_node_ *get_parent_without_checking();	// get the parent node, either before or after the 'set all parent nodes' pass, but note it will be incorrect if done before (this is usually just done for assertions)
+	virtual AST_node_ *get_parent_without_checking();	
 
 	virtual void set_par_pointers();
 	virtual string get_break_branch();
@@ -276,7 +269,6 @@ public:
 	void EM_error  (string message, bool fatal=false) {   ::EM_error(message, fatal, this->pos()); }
 	void EM_warning(string message, bool fatal=false) { ::EM_warning(message, this->pos()); }
 	void EM_debug  (string message, bool fatal=false) {   ::EM_debug(message, this->pos()); }
-
 
 	// And now, the attributes that exist in ALL kinds of AST nodes.
 	//  See Design_Documents/AST_Attributes.txt for details.
@@ -359,14 +351,11 @@ public:
 	int depth();   // example we'll play with in class, not actually needed to compile
 	virtual int compute_depth();
 
-protected:  // every derived class's set_parent should be able to get at stored_parent for "this" object
+protected:  
+	// every derived class's set_parent should be able to get at stored_parent for "this" object
 	AST_node_ *stored_parent = 0;
 	Ty_ty type;
 
-	//bool vars_set_in_scope = false;
-	//	int my_offset = -1;
-	//local_var_ST vars_in_scope = local_var_ST();
-	
 	bool canonical = false;
 	bool my_vars_set = false;
 	bool scope_set = false;
@@ -422,7 +411,6 @@ public:
 	string print_rep(int indent, bool with_attributes);
 
 	virtual Ty_ty typecheck();
-//	virtual A_root_ canonical_form();
 	virtual local_var_ST get_vars_in_scope(AST_node_* child, local_var_ST vars_so_far);
 	virtual std::vector<AST_node_*> get_children();
 	virtual int compute_depth();  // just for an example, not needed to compile
