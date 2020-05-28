@@ -30,3 +30,10 @@
 *.exe
 *.out
 *.app
+
+# Project specific
+Debug/tiger.dSYM
+lex.yy.cc
+stack.hh
+tiger-grammar.tab.cc
+tiger-grammar.tab.hh
